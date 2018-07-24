@@ -47,129 +47,129 @@ u_int64_t last_mqtt_publish = 0;
 
 // function called to publish the state of the button (on/off)
 void publishButtonState() {
-	if (m_button_state) {
-		client.publish(MQTT_BUTTON_STATE_TOPIC, CMD_ON, true);
-		Serial.println("Button ON");
-	}
-	else {
-		client.publish(MQTT_BUTTON_STATE_TOPIC, CMD_OFF, true);
-		Serial.println("Button OFF");
-	}
+  if (m_button_state) {
+    client.publish(MQTT_BUTTON_STATE_TOPIC, CMD_ON, true);
+    Serial.println("Button ON");
+  }
+  else {
+    client.publish(MQTT_BUTTON_STATE_TOPIC, CMD_OFF, true);
+    Serial.println("Button OFF");
+  }
 }
 
 void publishBatteryState() {
-	Serial.print("ESP Vcc: ");
-	Serial.println(ESP.getVcc()/1000);
-	snprintf(m_msg_buffer, MSG_BUFFER_SIZE, "%u", ESP.getVcc());
-	client.publish(MQTT_BATTERY_STATE_TOPIC, m_msg_buffer, true);
+  Serial.print("ESP Vcc: ");
+  Serial.println(ESP.getVcc()/1000);
+  snprintf(m_msg_buffer, MSG_BUFFER_SIZE, "%u", ESP.getVcc());
+  client.publish(MQTT_BATTERY_STATE_TOPIC, m_msg_buffer, true);
 }
 
 // function called when a MQTT message arrived
 void callback(char* p_topic, byte* p_payload, unsigned int p_length) {
-	// concat the payload into a string
-	String payload;
-	for (uint16_t i = 0; i < p_length; i++) {
-		payload.concat((char)p_payload[i]);
-	}
+  // concat the payload into a string
+  String payload;
+  for (uint16_t i = 0; i < p_length; i++) {
+    payload.concat((char)p_payload[i]);
+  }
 
-	// handle message topic
-	if (String(MQTT_BUTTON_COMMAND_TOPIC).equals(p_topic)) {
-		// test if the payload is equal to "ON" or "OFF"
-		if (payload.equals(String(CMD_ON))) {
-			m_button_state = true;
-			publishButtonState();
-		}
-		else if (payload.equals(String(CMD_OFF))) {
-			m_button_state = false;
-			publishButtonState();
-		}
-	}
+  // handle message topic
+  if (String(MQTT_BUTTON_COMMAND_TOPIC).equals(p_topic)) {
+    // test if the payload is equal to "ON" or "OFF"
+    if (payload.equals(String(CMD_ON))) {
+      m_button_state = true;
+      publishButtonState();
+    }
+    else if (payload.equals(String(CMD_OFF))) {
+      m_button_state = false;
+      publishButtonState();
+    }
+  }
 }
 
 void setup()
 {
-	pinMode(LED_RED_PIN, OUTPUT);
-	pinMode(LED_GREEN_PIN, OUTPUT);
-	pinMode(BUTTON_PIN, INPUT);
+  pinMode(LED_RED_PIN, OUTPUT);
+  pinMode(LED_GREEN_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT);
 
-	digitalWrite(LED_RED_PIN, 1);
-	digitalWrite(LED_GREEN_PIN, 0);
+  digitalWrite(LED_RED_PIN, 1);
+  digitalWrite(LED_GREEN_PIN, 0);
 
-	sprintf(chip_id, "%08X", ESP.getChipId());
-	sprintf(myhostname, "esp%08X", ESP.getChipId());
+  sprintf(chip_id, "%08X", ESP.getChipId());
+  sprintf(myhostname, "esp%08X", ESP.getChipId());
 
-	// Setup console
-	Serial.begin(115200);
-	delay(10);
-	Serial.println();
-	Serial.println();
+  // Setup console
+  Serial.begin(115200);
+  delay(10);
+  Serial.println();
+  Serial.println();
 
-	// reset if necessary
-	//wifiManager.resetSettings();
+  // reset if necessary
+  //wifiManager.resetSettings();
 
-	wifiManager.setTimeout(3600);
-	WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
-	wifiManager.addParameter(&custom_mqtt_server);
-	wifiManager.setCustomHeadElement(chip_id);
-	wifiManager.autoConnect();
+  wifiManager.setTimeout(3600);
+  WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
+  wifiManager.addParameter(&custom_mqtt_server);
+  wifiManager.setCustomHeadElement(chip_id);
+  wifiManager.autoConnect();
 
-	mqtt_server = custom_mqtt_server.getValue();
+  mqtt_server = custom_mqtt_server.getValue();
 
-	Serial.println("");
+  Serial.println("");
 
-	Serial.println("WiFi connected");
-	Serial.println("IP address: ");
-	Serial.println(WiFi.localIP());
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 
-	Serial.println("");
+  Serial.println("");
 
-	// init the MQTT connection
-	client.setServer(mqtt_server, mqtt_port);
-	client.setCallback(callback);
+  // init the MQTT connection
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
 
-	// replace chip ID in channel names
-	memcpy(MQTT_BUTTON_STATE_TOPIC, chip_id, 8);
-	memcpy(MQTT_BATTERY_STATE_TOPIC, chip_id, 8);
-	memcpy(MQTT_BUTTON_COMMAND_TOPIC, chip_id, 8);
+  // replace chip ID in channel names
+  memcpy(MQTT_BUTTON_STATE_TOPIC, chip_id, 8);
+  memcpy(MQTT_BATTERY_STATE_TOPIC, chip_id, 8);
+  memcpy(MQTT_BUTTON_COMMAND_TOPIC, chip_id, 8);
 }
 
 void reconnect() {
-	// Loop until we're reconnected
-	while (!client.connected()) {
-		digitalWrite(LED_GREEN_PIN, 0);
-		led.fade(0, 0);
-		Serial.print("Attempting MQTT connection...");
-		// Attempt to connect
-		if (client.connect(chip_id, mqtt_user, mqtt_password)) {
-			Serial.println("connected");
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    digitalWrite(LED_GREEN_PIN, 0);
+    led.fade(0, 0);
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect(chip_id, mqtt_user, mqtt_password)) {
+      Serial.println("connected");
 
-			client.publish(MQTT_UP, chip_id);
+      client.publish(MQTT_UP, chip_id);
 
-			// Once connected, publish an announcement...
-			publishBatteryState();
+      // Once connected, publish an announcement...
+      publishBatteryState();
 
-			// ... and resubscribe
-			client.subscribe(MQTT_BUTTON_COMMAND_TOPIC);
+      // ... and resubscribe
+      client.subscribe(MQTT_BUTTON_COMMAND_TOPIC);
 
-			digitalWrite(LED_GREEN_PIN, 1);
-			led.fade(255, 0);
-		}
-		else {
-			Serial.print("failed, rc=");
-			Serial.print(client.state());
-			Serial.println(" try again in 5 seconds");
-			// Wait 5 seconds before retrying
-			delay(5000);
-		}
-	}
+      digitalWrite(LED_GREEN_PIN, 1);
+      led.fade(255, 0);
+    }
+    else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
 }
 
 void loop()
 {
-	if (!client.connected()) {
-		reconnect();
-	}
-	client.loop();
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
 
   int reading = digitalRead(BUTTON_PIN);
 
@@ -183,16 +183,16 @@ void loop()
 
       if (buttonState == HIGH) {
         m_button_state = !m_button_state;
-				publishButtonState();
+        publishButtonState();
       }
     }
   }
 
   lastButtonState = reading;
 
-	led.update();
+  led.update();
 
-	if (led.is_fading() == false) {
+  if (led.is_fading() == false) {
 
     // Fade from 255 - 0
     if (led.get_value() == 255 && m_button_state == true) {
@@ -204,8 +204,8 @@ void loop()
     }
   }
 
-	if ((millis() - last_mqtt_publish) > 60000) {
-		publishBatteryState();
-		last_mqtt_publish = millis();
-	}
+  if ((millis() - last_mqtt_publish) > 60000) {
+    publishBatteryState();
+    last_mqtt_publish = millis();
+  }
 }
