@@ -131,6 +131,7 @@ void setup()
   memcpy(MQTT_BUTTON_STATE_TOPIC, chip_id, 8);
   memcpy(MQTT_BATTERY_STATE_TOPIC, chip_id, 8);
   memcpy(MQTT_BUTTON_COMMAND_TOPIC, chip_id, 8);
+  memcpy(MQTT_AVAILABILITY_TOPIC, chip_id, 8);
 }
 
 void reconnect() {
@@ -140,7 +141,7 @@ void reconnect() {
     led.fade(0, 0);
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(chip_id, mqtt_user, mqtt_password)) {
+    if (client.connect(chip_id, mqtt_user, mqtt_password, MQTT_AVAILABILITY_TOPIC, 0, 1, AVAIL_OFFLINE)) {
       Serial.println("connected");
 
       client.publish(MQTT_UP, chip_id);
@@ -150,6 +151,8 @@ void reconnect() {
 
       // ... and resubscribe
       client.subscribe(MQTT_BUTTON_COMMAND_TOPIC);
+
+      client.publish(MQTT_AVAILABILITY_TOPIC, AVAIL_ONLINE, true);
 
       digitalWrite(LED_GREEN_PIN, 1);
       led.fade(255, 0);
