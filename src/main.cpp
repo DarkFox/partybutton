@@ -146,8 +146,6 @@ void reconnect() {
 			client.publish(MQTT_UP, chip_id);
 
 			// Once connected, publish an announcement...
-			// publish the initial values
-			publishButtonState();
 			publishBatteryState();
 
 			// ... and resubscribe
