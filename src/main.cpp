@@ -35,7 +35,7 @@ LEDFader led = LEDFader(12);
 #define BUTTON_PIN     5
 
 // store the state of the button light (brightness, ...)
-boolean m_button_state = false;
+boolean m_button_active = false;
 
 boolean buttonState;             // the current reading from the input pin
 boolean lastButtonState = false; // the previous reading from the input pin
@@ -47,7 +47,7 @@ u_int64_t last_mqtt_publish = 0;
 
 // function called to publish the state of the button (on/off)
 void publishButtonState() {
-  if (m_button_state) {
+  if (m_button_active) {
     client.publish(MQTT_BUTTON_STATE_TOPIC, CMD_ON, true);
     Serial.println("Button ON");
   }
@@ -75,12 +75,12 @@ void callback(char* p_topic, byte* p_payload, unsigned int p_length) {
   // handle message topic
   if (String(MQTT_BUTTON_COMMAND_TOPIC).equals(p_topic)) {
     // test if the payload is equal to "ON" or "OFF"
-    if (payload.equals(String(CMD_ON))) {
-      m_button_state = true;
+    if (payload.equals(String(CMD_ON)) && !m_button_active) {
+      m_button_active = true;
       publishButtonState();
     }
-    else if (payload.equals(String(CMD_OFF))) {
-      m_button_state = false;
+    else if (payload.equals(String(CMD_OFF)) && m_button_active) {
+      m_button_active = false;
       publishButtonState();
     }
   }
@@ -182,7 +182,7 @@ void loop()
       buttonState = reading;
 
       if (buttonState == HIGH) {
-        m_button_state = !m_button_state;
+        m_button_active = !m_button_active;
         publishButtonState();
       }
     }
@@ -195,7 +195,7 @@ void loop()
   if (led.is_fading() == false) {
 
     // Fade from 255 - 0
-    if (led.get_value() == 255 && m_button_state == true) {
+    if (led.get_value() == 255 && m_button_active == true) {
       led.fade(0, 1500);
     }
     // Fade from 0 - 255
