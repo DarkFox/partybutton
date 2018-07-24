@@ -205,7 +205,6 @@ void loop()
   }
 
 	if ((millis() - last_mqtt_publish) > 60000) {
-		publishButtonState();
 		publishBatteryState();
 		last_mqtt_publish = millis();
 	}
